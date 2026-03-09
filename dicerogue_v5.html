@@ -1969,19 +1969,38 @@ function processRoll(){
   let comboName=combo.name;
 
   // ─── CHECK ELEMENTAL COMBOS ───────────────────────────
+  // Optimized single-pass elemental combo detection
+  const counts = {}, positions = {}, voidPos = [];
+  let voidCount = 0;
+  for(let i=0; i<dCount; i++) {
+    const el = B.els[i];
+    if(el === 'void') { voidCount++; voidPos.push(i); }
+    else {
+      counts[el] = (counts[el] || 0) + 1;
+      if(!positions[el]) positions[el] = [];
+      positions[el].push(i);
+    }
+  }
+
   // Priority: thunder > fire > void > water > wind > earth
   const elemOrder=['thunder','fire','void','water','wind','earth'];
-  let topElem=null, topCount=0;
+  let topElem=null, topCount=0, topPos=[];
 
-  elemOrder.forEach(el=>{
-    const r=checkElemCombo(el);
-    if(r.count>=3 && r.count>topCount){topCount=r.count;topElem=el;}
-  });
+  for(const el of elemOrder) {
+    let c;
+    if(el === 'void') { c = voidCount; }
+    else { c = (counts[el] || 0) + voidCount; }
+
+    if(c >= 3 && c > topCount) {
+      topCount = c;
+      topElem = el;
+      topPos = (el === 'void') ? voidPos : (positions[el] || []).concat(voidPos);
+    }
+  }
 
   if(topElem){
     const ec=ELEM_COMBOS[topElem];
-    const r=checkElemCombo(topElem);
-    const tier=r.count>=5?5:r.count>=4?4:3;
+    const tier=topCount>=5?5:topCount>=4?4:3;
     const tierK=`mult${tier}`;
     const eName=`name${tier}`;
 
@@ -2026,7 +2045,7 @@ function processRoll(){
       addLog(`${ec[eName]}! All multipliers boosted!`,ec.color);
     }
 
-    triggerElemFX(topElem, r.pos);
+    triggerElemFX(topElem, topPos);
     showToast(`${ec[eName]}! ${ec[`effect${tier}`]}`, topElem==='thunder'?'thnd':topElem==='water'?'watr':topElem==='wind'?'wind':topElem==='earth'?'erth':topElem==='void'?'void':'fire');
   }
 
@@ -2045,21 +2064,6 @@ function processRoll(){
   nm.style.color=ec2[effectEl]||'var(--gold)';
   nm.style.textShadow=effectEl?`3px 3px 0 rgba(0,0,0,.8), 0 0 20px ${ec2[effectEl]}`:'3px 3px 0 rgba(180,100,0,.7)';
   if(!effectEl) addLog(`${combo.name} — ${dmg} dmg (×${mult.toFixed(1)})`,'#c9a03a');
-}
-
-/* Check elemental combo — returns count and positions (void counts as wild) */
-function checkElemCombo(el){
-  const B=G.B; const count=B.dieCount||5;
-  const pos=[];
-  B.els.slice(0,count).forEach((e,i)=>{
-    if(e===el||(e==='void'&&el!=='void')) pos.push(i);
-  });
-  // For void, count only actual void dice
-  if(el==='void'){
-    pos.length=0;
-    B.els.slice(0,count).forEach((e,i)=>{if(e==='void')pos.push(i);});
-  }
-  return{count:pos.length,triggered:pos.length>=3,pos};
 }
 
 /* Unified elemental FX trigger */
