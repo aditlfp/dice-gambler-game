@@ -5,3 +5,7 @@
 ## 2025-05-14 - [Scope and Definition Vigilance]
 **Learning:** Even when optimizing algorithms, forgetting to define local aliases for global or object-property variables (like `B` for `G.B`) can lead to critical `ReferenceError` crashes.
 **Action:** Before finalizing any refactor, perform a manual "definition sweep" to ensure every variable used is either defined in the local scope or explicitly accessed from its parent object.
+
+## 2025-05-14 - [State Leakage and UI Stale States]
+**Learning:** In frontend applications that reuse UI elements across different game states (like a shared roll button across battles), failing to reset UI properties (like `disabled`) when entering a new state can lead to "soft locks" where the user cannot interact with the game.
+**Action:** Always include a comprehensive UI state reset in the initialization or entry function of a state (e.g., `renderBattle`).
